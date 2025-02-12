@@ -132,3 +132,8 @@ RUN cd /skypilot && \
     if [ "$INSTALL_FROM_SOURCE" != "true" ]; then \
         rm -rf /skypilot; \
     fi
+
+# Old version below
+# Install sky
+# RUN pip install --no-cache-dir "skypilot[all]==0.8.0"
+
