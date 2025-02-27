@@ -260,8 +260,7 @@ def launch(cluster_name: str, node_type: str, instance_type: str, region: str,
     setup_cmd = (
         'prefix_cmd() '
         '{ if [ $(id -u) -ne 0 ]; then echo "sudo"; else echo ""; fi; }; '
-        'echo "Exporting environment variables...";'
-        'printenv'
+        'printenv;'
         # 'printenv | grep -E \'^RUNPOD_|^PATH=|^_=\' | awk -F = \'{ print "export " $1 "=\"" $2 "\"" }\' >> /etc/rp_environment;'
         # 'echo "source /etc/rp_environment" >> ~/.bashrc;'
         '$(prefix_cmd) apt update;'
