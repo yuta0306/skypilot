@@ -298,9 +298,8 @@ def launch(
     setup_cmd = (
         'prefix_cmd() '
         '{ if [ $(id -u) -ne 0 ]; then echo "sudo"; else echo ""; fi; }; '
-        'printenv;'
-        # 'printenv | grep -E \'^RUNPOD_|^PATH=|^_=\' | awk -F = \'{ print "export " $1 "=\"" $2 "\"" }\' >> /etc/rp_environment;'
-        # 'echo "source /etc/rp_environment" >> ~/.bashrc;'
+        'printenv | grep -E \'^RUNPOD_|^PATH=|^_=\' | awk -F = \'{ print "export " $1 "=\"" $2 "\"" }\' >> /etc/rp_environment;'
+        'echo "source /etc/rp_environment" >> ~/.bashrc;'
         '$(prefix_cmd) apt update;'
         'export DEBIAN_FRONTEND=noninteractive;'
         '$(prefix_cmd) apt install openssh-server rsync curl patch -y;'
