@@ -343,7 +343,7 @@ def launch(
     # Port 8081 is occupied for nginx in the base image.
     custom_ports_str = ""
     if ports is not None:
-        custom_ports_str = "".join(ports)
+        custom_ports_str = "".join([f"{p}/http," for p in ports])
     ports_str = (
         f"22/tcp,"
         f"{custom_ports_str}"
