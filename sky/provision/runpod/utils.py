@@ -76,7 +76,7 @@ GPU_NAME_MAP = {
 
 def _construct_docker_login_template_name(cluster_name: str) -> str:
     """Constructs the registry auth template name."""
-    return f'{cluster_name}-docker-login-template'
+    return f"{cluster_name}-docker-login-template"
 
 
 def retry(func):
@@ -91,8 +91,9 @@ def retry(func):
             except runpod.runpod.error.QueryError as e:
                 if cnt >= 3:
                     raise
-                logger.warning('Retrying for exception: '
-                               f'{common_utils.format_exception(e)}.')
+                logger.warning(
+                    "Retrying for exception: " f"{common_utils.format_exception(e)}."
+                )
                 time.sleep(1)
 
     return wrapper
@@ -149,7 +150,7 @@ def _sky_get_pods() -> dict:
     Adapted from runpod.get_pods() to include containerRegistryAuthId.
     """
     raw_return = runpod.runpod.api.graphql.run_graphql_query(_QUERY_POD)
-    cleaned_return = raw_return['data']['myself']['pods']
+    cleaned_return = raw_return["data"]["myself"]["pods"]
     return cleaned_return
 
 
@@ -168,8 +169,9 @@ query myself {
 def _list_pod_templates_with_container_registry() -> dict:
     """List all pod templates."""
     raw_return = runpod.runpod.api.graphql.run_graphql_query(
-        _QUERY_POD_TEMPLATE_WITH_REGISTRY_AUTH)
-    return raw_return['data']['myself']['podTemplates']
+        _QUERY_POD_TEMPLATE_WITH_REGISTRY_AUTH
+    )
+    return raw_return["data"]["myself"]["podTemplates"]
 
 
 def list_instances() -> Dict[str, Dict[str, Any]]:
@@ -180,28 +182,30 @@ def list_instances() -> Dict[str, Dict[str, Any]]:
     for instance in instances:
         info = {}
 
-        info['status'] = instance['desiredStatus']
-        info['name'] = instance['name']
-        info['port2endpoint'] = {}
+        info["status"] = instance["desiredStatus"]
+        info["name"] = instance["name"]
+        info["port2endpoint"] = {}
 
         # Sometimes when the cluster is in the process of being created,
         # the `port` field in the runtime is None and we need to check for it.
-        if (instance['desiredStatus'] == 'RUNNING' and
-                instance.get('runtime') and
-                instance.get('runtime').get('ports')):
-            for port in instance['runtime']['ports']:
-                if port['isIpPublic']:
-                    if port['privatePort'] == 22:
-                        info['external_ip'] = port['ip']
-                        info['ssh_port'] = port['publicPort']
-                    info['port2endpoint'][port['privatePort']] = {
-                        'host': port['ip'],
-                        'port': port['publicPort']
+        if (
+            instance["desiredStatus"] == "RUNNING"
+            and instance.get("runtime")
+            and instance.get("runtime").get("ports")
+        ):
+            for port in instance["runtime"]["ports"]:
+                if port["isIpPublic"]:
+                    if port["privatePort"] == 22:
+                        info["external_ip"] = port["ip"]
+                        info["ssh_port"] = port["publicPort"]
+                    info["port2endpoint"][port["privatePort"]] = {
+                        "host": port["ip"],
+                        "port": port["publicPort"],
                     }
                 else:
-                    info['internal_ip'] = port['ip']
+                    info["internal_ip"] = port["ip"]
 
-        instance_dict[instance['id']] = info
+        instance_dict[instance["id"]] = info
 
     return instance_dict
 
@@ -210,10 +214,13 @@ def delete_pod_template(template_name: str) -> None:
     """Deletes a pod template."""
     try:
         runpod.runpod.api.graphql.run_graphql_query(
-            f'mutation {{deleteTemplate(templateName: "{template_name}")}}')
+            f'mutation {{deleteTemplate(templateName: "{template_name}")}}'
+        )
     except runpod.runpod.error.QueryError as e:
-        logger.warning(f'Failed to delete template {template_name}: {e} '
-                       'Please delete it manually.')
+        logger.warning(
+            f"Failed to delete template {template_name}: {e} "
+            "Please delete it manually."
+        )
 
 
 def delete_register_auth(registry_auth_id: str) -> None:
@@ -222,8 +229,9 @@ def delete_register_auth(registry_auth_id: str) -> None:
         runpod.runpod.delete_container_registry_auth(registry_auth_id)
     except runpod.runpod.error.QueryError as e:
         logger.warning(
-            f'Failed to delete registry auth {registry_auth_id}: {e} '
-            'Please delete it manually.')
+            f"Failed to delete registry auth {registry_auth_id}: {e} "
+            "Please delete it manually."
+        )
 
 
 def _create_template_for_docker_login(
@@ -240,9 +248,8 @@ def _create_template_for_docker_login(
     if docker_login_config is None:
         return image_name, None
     login_config = docker_utils.DockerLoginConfig(**docker_login_config)
-    container_registry_auth_name = f'{cluster_name}-registry-auth'
-    container_template_name = _construct_docker_login_template_name(
-        cluster_name)
+    container_registry_auth_name = f"{cluster_name}-registry-auth"
+    container_template_name = _construct_docker_login_template_name(cluster_name)
     # The `name` argument is only for display purpose and the registry server
     # will be splitted from the docker image name (Tested with AWS ECR).
     # Here we only need the username and password to create the registry auth.
@@ -254,13 +261,13 @@ def _create_template_for_docker_login(
         username=login_config.username,
         password=login_config.password,
     )
-    registry_auth_id = create_auth_resp['id']
+    registry_auth_id = create_auth_resp["id"]
     create_template_resp = runpod.runpod.create_template(
         name=container_template_name,
         image_name=None,
         registry_auth_id=registry_auth_id,
     )
-    return login_config.format_image(image_name), create_template_resp['id']
+    return login_config.format_image(image_name), create_template_resp["id"]
 
 
 def launch(
@@ -291,30 +298,33 @@ def launch(
     Returns:
         instance_id: The instance ID.
     """
-    name = f'{cluster_name}-{node_type}'
+    name = f"{cluster_name}-{node_type}"
+    gpu_type = GPU_NAME_MAP[instance_type.split("_")[1]]
+    gpu_quantity = int(instance_type.split("_")[0].replace("x", ""))
+    cloud_type = instance_type.split("_")[2]
 
     # TODO(zhwu): keep this align with setups in
     # `provision.kuberunetes.instance.py`
     setup_cmd = (
-        'prefix_cmd() '
+        "prefix_cmd() "
         '{ if [ $(id -u) -ne 0 ]; then echo "sudo"; else echo ""; fi; }; '
         'printenv | grep -E "^RUNPOD_|^PATH=|^_=";'
         'printenv | grep -E "^RUNPOD_|^PATH=|^_=" | sed -s "s/^/export /g" >> /etc/rp_environment;'
         'echo "source /etc/rp_environment" >> ~/.bashrc;'
-        '$(prefix_cmd) apt update;'
-        'export DEBIAN_FRONTEND=noninteractive;'
-        '$(prefix_cmd) apt install openssh-server rsync curl patch -y;'
-        '$(prefix_cmd) mkdir -p /var/run/sshd; '
-        '$(prefix_cmd) '
+        "$(prefix_cmd) apt update;"
+        "export DEBIAN_FRONTEND=noninteractive;"
+        "$(prefix_cmd) apt install openssh-server rsync curl patch -y;"
+        "$(prefix_cmd) mkdir -p /var/run/sshd; "
+        "$(prefix_cmd) "
         'sed -i "s/PermitRootLogin prohibit-password/PermitRootLogin yes/" '
-        '/etc/ssh/sshd_config; '
-        '$(prefix_cmd) sed '
+        "/etc/ssh/sshd_config; "
+        "$(prefix_cmd) sed "
         '"s@session\\s*required\\s*pam_loginuid.so@session optional '
         'pam_loginuid.so@g" -i /etc/pam.d/sshd; '
-        'cd /etc/ssh/ && $(prefix_cmd) ssh-keygen -A; '
-        '$(prefix_cmd) mkdir -p ~/.ssh; '
-        '$(prefix_cmd) chown -R $(whoami) ~/.ssh;'
-        '$(prefix_cmd) chmod 700 ~/.ssh; '
+        "cd /etc/ssh/ && $(prefix_cmd) ssh-keygen -A; "
+        "$(prefix_cmd) mkdir -p ~/.ssh; "
+        "$(prefix_cmd) chown -R $(whoami) ~/.ssh;"
+        "$(prefix_cmd) chmod 700 ~/.ssh; "
         f'$(prefix_cmd) echo "{public_key}" >> ~/.ssh/authorized_keys; '
         '$(prefix_cmd) chmod 644 ~/.ssh/authorized_keys; '
         '$(prefix_cmd) service ssh restart; '
@@ -322,34 +332,43 @@ def launch(
         '$(prefix_cmd) '
         'mv ~/container_env_var.sh /etc/profile.d/container_env_var.sh; '
         '[ $(id -u) -eq 0 ] && echo alias sudo="" >> ~/.bashrc;sleep infinity')
+    )
     # Use base64 to deal with the tricky quoting issues caused by runpod API.
-    encoded = base64.b64encode(setup_cmd.encode('utf-8')).decode('utf-8')
+    encoded = base64.b64encode(setup_cmd.encode("utf-8")).decode("utf-8")
 
-    docker_args = (f'bash -c \'echo {encoded} | base64 --decode > init.sh; '
-                   f'bash init.sh\'')
+    docker_args = (
+        f"bash -c 'echo {encoded} | base64 --decode > init.sh; " f"bash init.sh'"
+    )
 
     # Port 8081 is occupied for nginx in the base image.
-    custom_ports_str = ''
+    custom_ports_str = ""
     if ports is not None:
-        custom_ports_str = ''.join([f'{p}/tcp,' for p in ports])
-    ports_str = (f'22/tcp,'
-                 f'{custom_ports_str}'
-                 f'{constants.SKY_REMOTE_RAY_DASHBOARD_PORT}/http,'
-                 f'{constants.SKY_REMOTE_RAY_PORT}/http')
+        custom_ports_str = "".join(ports)
+    ports_str = (
+        f"22/tcp,"
+        f"{custom_ports_str}"
+        f"{constants.SKY_REMOTE_RAY_DASHBOARD_PORT}/http,"
+        f"{constants.SKY_REMOTE_RAY_PORT}/http"
+    )
 
     image_name_formatted, template_id = _create_template_for_docker_login(
-        cluster_name, image_name, docker_login_config)
+        cluster_name, image_name, docker_login_config
+    )
 
     params = {
-        'name': name,
-        'image_name': image_name_formatted,
-        'container_disk_in_gb': disk_size,
-        'country_code': region,
-        'data_center_id': zone,
-        'ports': ports_str,
-        'support_public_ip': True,
-        'docker_args': docker_args,
-        'template_id': template_id,
+        "name": name,
+        "image_name": image_name_formatted,
+        "gpu_type_id": gpu_type,
+        "cloud_type": cloud_type,
+        "container_disk_in_gb": disk_size,
+        "min_vcpu_count": 4 * gpu_quantity,
+        "min_memory_in_gb": gpu_specs["memoryInGb"] * gpu_quantity,
+        "gpu_count": gpu_quantity,
+        "country_code": region,
+        "ports": ports_str,
+        "support_public_ip": True,
+        "docker_args": docker_args,
+        "template_id": template_id,
     }
 
     # Optional network volume mount.
@@ -387,18 +406,17 @@ def launch(
             **params,  # type: ignore[arg-type]
         )
 
-    return new_instance['id']
+    return new_instance["id"]
 
 
 def get_registry_auth_resources(
-        cluster_name: str) -> Tuple[Optional[str], Optional[str]]:
+    cluster_name: str,
+) -> Tuple[Optional[str], Optional[str]]:
     """Gets the registry auth resources."""
-    container_registry_auth_name = _construct_docker_login_template_name(
-        cluster_name)
+    container_registry_auth_name = _construct_docker_login_template_name(cluster_name)
     for template in _list_pod_templates_with_container_registry():
-        if template['name'] == container_registry_auth_name:
-            return container_registry_auth_name, template[
-                'containerRegistryAuthId']
+        if template["name"] == container_registry_auth_name:
+            return container_registry_auth_name, template["containerRegistryAuthId"]
     return None, None
 
 
@@ -409,17 +427,16 @@ def remove(instance_id: str) -> None:
 
 def get_ssh_ports(cluster_name) -> List[int]:
     """Gets the SSH ports for the given cluster."""
-    logger.debug(f'Getting SSH ports for cluster {cluster_name}.')
+    logger.debug(f"Getting SSH ports for cluster {cluster_name}.")
 
     instances = list_instances()
-    possible_names = [f'{cluster_name}-head', f'{cluster_name}-worker']
+    possible_names = [f"{cluster_name}-head", f"{cluster_name}-worker"]
 
     ssh_ports = []
 
     for instance in instances.values():
-        if instance['name'] in possible_names:
-            ssh_ports.append(instance['ssh_port'])
-    assert ssh_ports, (
-        f'Could not find any instances for cluster {cluster_name}.')
+        if instance["name"] in possible_names:
+            ssh_ports.append(instance["ssh_port"])
+    assert ssh_ports, f"Could not find any instances for cluster {cluster_name}."
 
     return ssh_ports
