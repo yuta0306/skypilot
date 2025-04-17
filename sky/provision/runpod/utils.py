@@ -325,13 +325,14 @@ def launch(
         "$(prefix_cmd) mkdir -p ~/.ssh; "
         "$(prefix_cmd) chown -R $(whoami) ~/.ssh;"
         "$(prefix_cmd) chmod 700 ~/.ssh; "
+        'echo "$PUBLIC_KEY" >> ~/.ssh/authorized_keys; '
         f'$(prefix_cmd) echo "{public_key}" >> ~/.ssh/authorized_keys; '
         '$(prefix_cmd) chmod 644 ~/.ssh/authorized_keys; '
         '$(prefix_cmd) service ssh restart; '
         '$(prefix_cmd) export -p > ~/container_env_var.sh && '
         '$(prefix_cmd) '
         'mv ~/container_env_var.sh /etc/profile.d/container_env_var.sh; '
-        '[ $(id -u) -eq 0 ] && echo alias sudo="" >> ~/.bashrc;sleep infinity')
+        '[ $(id -u) -eq 0 ] && echo alias sudo="" >> ~/.bashrc;sleep infinity'
     )
     # Use base64 to deal with the tricky quoting issues caused by runpod API.
     encoded = base64.b64encode(setup_cmd.encode("utf-8")).decode("utf-8")
@@ -356,19 +357,15 @@ def launch(
     )
 
     params = {
-        "name": name,
-        "image_name": image_name_formatted,
-        "gpu_type_id": gpu_type,
-        "cloud_type": cloud_type,
-        "container_disk_in_gb": disk_size,
-        "min_vcpu_count": 4 * gpu_quantity,
-        "min_memory_in_gb": gpu_specs["memoryInGb"] * gpu_quantity,
-        "gpu_count": gpu_quantity,
-        "country_code": region,
-        "ports": ports_str,
-        "support_public_ip": True,
-        "docker_args": docker_args,
-        "template_id": template_id,
+        'name': name,
+        'image_name': image_name_formatted,
+        'container_disk_in_gb': disk_size,
+        'country_code': region,
+        'data_center_id': zone,
+        'ports': ports_str,
+        'support_public_ip': True,
+        'docker_args': docker_args,
+        'template_id': template_id,
     }
 
     # Optional network volume mount.
